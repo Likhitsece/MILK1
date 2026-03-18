@@ -1,77 +1,378 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Milk Quality Monitor</title>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial;background:#f8f7f5;padding:24px}
-h1{font-size:20px;margin-bottom:10px}
-.btn{padding:8px 14px;border:none;border-radius:6px;background:#111;color:#fff;cursor:pointer}
-.metric{background:#fff;padding:15px;border-radius:10px;margin:10px 0}
+body{font-family:var(--font-sans);background:#f8f7f5;color:var(--color-text-primary);padding:24px;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.topbar-left{display:flex;align-items:center;gap:10px}
+h1{font-size:20px;font-weight:500;letter-spacing:-0.3px}
+.tag{font-size:11px;color:#6b7280;border:0.5px solid #d1d5db;border-radius:4px;padding:3px 8px}
+.pill-status{font-size:11px;border-radius:4px;padding:3px 9px;font-weight:500}
+.pill-status.connected{background:#dcfce7;color:#15803d}
+.pill-status.disconnected{background:#fee2e2;color:#991b1b}
+.pill-status.polling{background:#fef9c3;color:#92400e}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#16a34a}
+.live-dot.active{animation:blink 1.2s infinite}
+.live-dot.off{background:#d1d5db}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.25}}
+.btn{font-size:13px;padding:6px 14px;border:0.5px solid #d1d5db;border-radius:6px;background:#fff;color:var(--color-text-primary);cursor:pointer}
+.btn:hover{background:#f3f4f6}
+.btn.primary{background:#111;color:#fff;border-color:#111}
+.btn.primary:hover{background:#333}
+.btn.active{background:#dcfce7;color:#15803d;border-color:#86efac}
+.btn.stop{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+
+.config-bar{background:#fff;border:0.5px solid #e5e7eb;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.config-bar label{font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px}
+.config-bar input[type=text]{font-size:13px;padding:5px 9px;border:0.5px solid #d1d5db;border-radius:6px;width:240px;outline:none;color:var(--color-text-primary)}
+.config-bar input[type=number]{font-size:13px;padding:5px 9px;border:0.5px solid #d1d5db;border-radius:6px;width:70px;outline:none;color:var(--color-text-primary)}
+.config-bar input:focus{border-color:#6b7280}
+.log-line{font-size:11px;color:#6b7280;margin-left:auto;font-variant-numeric:tabular-nums}
+
+.status-card{border-radius:12px;padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border:0.5px solid transparent}
+.sc-Fresh{background:#f0fdf4;border-color:#86efac}
+.sc-Warning{background:#fffbeb;border-color:#fcd34d}
+.sc-Spoiled{background:#fef2f2;border-color:#fca5a5}
+.sc-none{background:#f9fafb;border-color:#e5e7eb}
+.status-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;margin-bottom:4px}
+.sc-Fresh .status-label,.sc-Fresh .status-value{color:#15803d}
+.sc-Warning .status-label,.sc-Warning .status-value{color:#b45309}
+.sc-Spoiled .status-label,.sc-Spoiled .status-value{color:#dc2626}
+.sc-none .status-label,.sc-none .status-value{color:#9ca3af}
+.status-value{font-size:34px;font-weight:500;letter-spacing:-1px}
+.conf-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.conf-track{height:5px;border-radius:3px;background:#e5e7eb;width:180px}
+.conf-fill{height:5px;border-radius:3px;transition:width .4s}
+.sc-Fresh .conf-fill{background:#16a34a}
+.sc-Warning .conf-fill{background:#d97706}
+.sc-Spoiled .conf-fill{background:#dc2626}
+.ts{font-size:12px;color:#9ca3af;margin-top:5px}
+
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.metric{background:#fff;border:0.5px solid #e5e7eb;border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.m-ph::before{background:#7c3aed}
+.m-temp::before{background:#ea580c}
+.m-gas::before{background:#0284c7}
+.metric-label{font-size:11px;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.metric-val{font-size:28px;font-weight:500;line-height:1;color:var(--color-text-primary)}
+.metric-unit{font-size:13px;color:#9ca3af;margin-left:2px}
+.metric-sub{font-size:11px;color:#9ca3af;margin-top:5px}
+
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.chart-card{background:#fff;border:0.5px solid #e5e7eb;border-radius:10px;padding:16px}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:13px;font-weight:500;color:#374151;margin-bottom:10px}
+.legend{display:flex;gap:14px;margin-bottom:8px;font-size:12px;color:#6b7280;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:4px}
+.leg-sq{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+.table-card{background:#fff;border:0.5px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:4px}
+.table-header{padding:12px 18px;border-bottom:0.5px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center}
+.table-title{font-size:13px;font-weight:500;color:#374151}
+.count-badge{font-size:11px;background:#f3f4f6;border:0.5px solid #e5e7eb;border-radius:4px;padding:2px 8px;color:#6b7280}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+thead th{padding:7px 16px;text-align:left;font-size:11px;font-weight:500;color:#9ca3af;letter-spacing:0.8px;text-transform:uppercase;border-bottom:0.5px solid #e5e7eb;background:#fafafa}
+tbody td{padding:9px 16px;border-bottom:0.5px solid #f3f4f6;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#fafafa}
+.rpill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.rpill.Fresh{background:#dcfce7;color:#15803d}
+.rpill.Warning{background:#fef9c3;color:#92400e}
+.rpill.Spoiled{background:#fee2e2;color:#991b1b}
+.empty-state{text-align:center;padding:32px;color:#9ca3af;font-size:13px}
+
+@media(max-width:560px){.metrics{grid-template-columns:1fr}.charts{grid-template-columns:1fr}}
 </style>
-</head>
 
-<body>
+<div>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="live-dot off" id="liveDot"></div>
+    <h1>Milk quality monitor</h1>
+    <span class="tag">ESP32 + Flask ML</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span class="pill-status disconnected" id="connBadge">Disconnected</span>
+    <button class="btn" onclick="exportCSV()">Export CSV</button>
+    <button class="btn" onclick="clearAll()">Clear</button>
+  </div>
+</div>
 
-<h1>Milk Quality Monitor (Simulation)</h1>
-<button class="btn" onclick="start()">Start Simulation</button>
+<div class="config-bar">
+  <label>Flask URL
+    <input type="text" id="flaskUrl" value="http://localhost:5000/history" placeholder="http://192.168.x.x:5000/history">
+  </label>
+  <label>Poll every
+    <input type="number" id="pollInterval" value="3" min="1" max="60" step="1">s
+  </label>
+  <button class="btn primary" id="pollBtn" onclick="togglePoll()">Start polling</button>
+  <span class="log-line" id="logLine">Not polling</span>
+</div>
 
-<div class="metric">pH: <span id="ph">--</span></div>
-<div class="metric">Temperature: <span id="temp">--</span> °C</div>
-<div class="metric">Gas: <span id="gas">--</span> ppm</div>
-<div class="metric">Status: <span id="status">--</span></div>
+<div class="status-card sc-none" id="statusCard">
+  <div>
+    <div class="status-label" id="statusLabel">Waiting for ESP32</div>
+    <div class="status-value" id="statusValue">— — —</div>
+    <div class="conf-row">
+      <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+      <span style="font-size:12px;color:#6b7280" id="confPct">—% confidence</span>
+    </div>
+    <div class="ts" id="lastTs">No readings received yet</div>
+  </div>
+  <div id="statusIcon" style="font-size:38px;color:#e5e7eb;font-weight:500">?</div>
+</div>
 
-<canvas id="chart" height="100"></canvas>
+<div class="metrics">
+  <div class="metric m-ph">
+    <div class="metric-label">pH level</div>
+    <div><span class="metric-val" id="mPh">—</span><span class="metric-unit">pH</span></div>
+    <div class="metric-sub">Normal: 6.4 – 6.8</div>
+  </div>
+  <div class="metric m-temp">
+    <div class="metric-label">Temperature</div>
+    <div><span class="metric-val" id="mTemp">—</span><span class="metric-unit">°C</span></div>
+    <div class="metric-sub">Safe: below 8°C</div>
+  </div>
+  <div class="metric m-gas">
+    <div class="metric-label">Gas level</div>
+    <div><span class="metric-val" id="mGas">—</span><span class="metric-unit">ppm</span></div>
+    <div class="metric-sub">Safe: below 200 ppm</div>
+  </div>
+</div>
+
+<div class="charts">
+  <div class="chart-card full">
+    <div class="chart-title">Sensor readings over time</div>
+    <div class="legend">
+      <span><span class="leg-sq" style="background:#7c3aed"></span>pH</span>
+      <span><span class="leg-sq" style="background:#ea580c"></span>Temp °C</span>
+      <span><span class="leg-sq" style="background:#0284c7"></span>Gas ÷ 10</span>
+    </div>
+    <div style="position:relative;height:200px"><canvas id="lineChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Prediction breakdown</div>
+    <div class="legend">
+      <span><span class="leg-sq" style="background:#16a34a"></span>Fresh</span>
+      <span><span class="leg-sq" style="background:#d97706"></span>Warning</span>
+      <span><span class="leg-sq" style="background:#dc2626"></span>Spoiled</span>
+    </div>
+    <div style="position:relative;height:160px"><canvas id="pieChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Confidence over time</div>
+    <div style="position:relative;height:160px"><canvas id="confChart"></canvas></div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-header">
+    <span class="table-title">Reading history</span>
+    <span class="count-badge" id="countBadge">0 readings</span>
+  </div>
+  <div id="tableWrap"><div class="empty-state">Waiting for data from Flask — click Start polling</div></div>
+</div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-
 <script>
-let chart;
-let data = [];
+let pollTimer = null;
+let isPolling = false;
+let knownCount = 0;
+let readings = [];
+let lineChart, pieChart, confChart;
+const COUNTS = {Fresh:0,Warning:0,Spoiled:0};
 
-function random(min,max){return Math.random()*(max-min)+min}
-
-function predict(ph,temp,gas){
-  if(gas>300 || temp>10) return "Spoiled";
-  if(gas>200 || temp>7) return "Warning";
-  return "Fresh";
+function togglePoll() {
+  if (isPolling) stopPoll(); else startPoll();
 }
 
-function start(){
-  setInterval(()=>{
-    const ph = random(6.2,7.0);
-    const temp = random(4,12);
-    const gas = random(100,400);
+function startPoll() {
+  isPolling = true;
+  document.getElementById('pollBtn').textContent = 'Stop polling';
+  document.getElementById('pollBtn').className = 'btn stop';
+  document.getElementById('liveDot').className = 'live-dot active';
+  document.getElementById('connBadge').textContent = 'Polling...';
+  document.getElementById('connBadge').className = 'pill-status polling';
+  poll();
+  const secs = Math.max(1, parseInt(document.getElementById('pollInterval').value) || 3);
+  pollTimer = setInterval(poll, secs * 1000);
+}
 
-    const status = predict(ph,temp,gas);
+function stopPoll() {
+  isPolling = false;
+  clearInterval(pollTimer);
+  pollTimer = null;
+  document.getElementById('pollBtn').textContent = 'Start polling';
+  document.getElementById('pollBtn').className = 'btn primary';
+  document.getElementById('liveDot').className = 'live-dot off';
+  document.getElementById('connBadge').textContent = 'Stopped';
+  document.getElementById('connBadge').className = 'pill-status disconnected';
+  setLog('Polling stopped');
+}
 
-    document.getElementById("ph").innerText = ph.toFixed(2);
-    document.getElementById("temp").innerText = temp.toFixed(1);
-    document.getElementById("gas").innerText = Math.round(gas);
-    document.getElementById("status").innerText = status;
-
-    data.push(gas);
-
-    if(!chart){
-      chart = new Chart(document.getElementById("chart"),{
-        type:"line",
-        data:{
-          labels:data.map((_,i)=>i),
-          datasets:[{label:"Gas",data:data}]
-        }
-      });
-    }else{
-      chart.data.labels = data.map((_,i)=>i);
-      chart.data.datasets[0].data = data;
-      chart.update();
+async function poll() {
+  const url = document.getElementById('flaskUrl').value.trim();
+  if (!url) return;
+  try {
+    const res = await fetch(url, {signal: AbortSignal.timeout(4000)});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    document.getElementById('connBadge').textContent = 'Connected';
+    document.getElementById('connBadge').className = 'pill-status connected';
+    if (data.length > knownCount) {
+      const newOnes = data.slice(knownCount);
+      newOnes.forEach(r => ingestReading(r));
+      knownCount = data.length;
+      setLog('Last sync: ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' · ' + readings.length + ' total');
+    } else {
+      setLog('No new data · ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
     }
-
-  },2000);
+  } catch(e) {
+    document.getElementById('connBadge').textContent = 'Unreachable';
+    document.getElementById('connBadge').className = 'pill-status disconnected';
+    setLog('Flask unreachable — ' + e.message);
+  }
 }
-</script>
 
-</body>
-</html>
+function ingestReading(r) {
+  const ph   = parseFloat(r.ph);
+  const temp = parseFloat(r.temp);
+  const gas  = parseFloat(r.gas);
+  const prediction = r.prediction || 'Unknown';
+  const confidence = parseFloat(r.confidence) || 0;
+  const ts = r.timestamp || new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const entry = {ph, temp, gas, prediction, confidence, ts};
+  readings.push(entry);
+  if (COUNTS[prediction] !== undefined) COUNTS[prediction]++;
+  updateUI(entry);
+}
+
+function updateUI(entry) {
+  const {ph, temp, gas, prediction, confidence, ts} = entry;
+  const card = document.getElementById('statusCard');
+  card.className = 'status-card sc-' + prediction;
+  document.getElementById('statusLabel').textContent = 'ML prediction';
+  document.getElementById('statusValue').textContent = prediction.toUpperCase();
+  document.getElementById('confFill').style.width = confidence + '%';
+  document.getElementById('confPct').textContent = confidence.toFixed(1) + '% confidence';
+  document.getElementById('lastTs').textContent = 'Last reading at ' + ts;
+  const icons = {Fresh:'✓', Warning:'!', Spoiled:'✗'};
+  document.getElementById('statusIcon').textContent = icons[prediction] || '?';
+  document.getElementById('mPh').textContent = ph.toFixed(2);
+  document.getElementById('mTemp').textContent = temp.toFixed(1);
+  document.getElementById('mGas').textContent = Math.round(gas);
+  document.getElementById('countBadge').textContent = readings.length + ' reading' + (readings.length !== 1 ? 's' : '');
+  updateCharts();
+  renderTable();
+}
+
+function updateCharts() {
+  const last = readings.slice(-24);
+  const labels = last.map(r => r.ts);
+  const phs   = last.map(r => parseFloat(r.ph.toFixed(2)));
+  const temps = last.map(r => parseFloat(r.temp.toFixed(1)));
+  const gases = last.map(r => parseFloat((r.gas / 10).toFixed(1)));
+  const confs = last.map(r => parseFloat(r.confidence.toFixed(1)));
+  const barColors = last.map(r => r.prediction === 'Fresh' ? '#16a34a' : r.prediction === 'Warning' ? '#d97706' : '#dc2626');
+
+  if (!lineChart) {
+    lineChart = new Chart(document.getElementById('lineChart'), {
+      type: 'line',
+      data: {labels, datasets:[
+        {label:'pH', data:phs, borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.05)', tension:.35, pointRadius:2, yAxisID:'y'},
+        {label:'Temp', data:temps, borderColor:'#ea580c', backgroundColor:'rgba(234,88,12,.05)', tension:.35, pointRadius:2, yAxisID:'y2'},
+        {label:'Gas/10', data:gases, borderColor:'#0284c7', backgroundColor:'rgba(2,132,199,.05)', tension:.35, pointRadius:2, yAxisID:'y'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{font:{size:10},color:'#9ca3af',maxTicksLimit:8},grid:{color:'#f3f4f6'}},
+          y:{position:'left',ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}},
+          y2:{position:'right',ticks:{font:{size:10},color:'#9ca3af'},grid:{drawOnChartArea:false}}
+        }}
+    });
+  } else {
+    lineChart.data.labels = labels;
+    lineChart.data.datasets[0].data = phs;
+    lineChart.data.datasets[1].data = temps;
+    lineChart.data.datasets[2].data = gases;
+    lineChart.update('none');
+  }
+
+  const pd = [COUNTS.Fresh, COUNTS.Warning, COUNTS.Spoiled];
+  if (!pieChart) {
+    pieChart = new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data:{labels:['Fresh','Warning','Spoiled'],datasets:[{data:pd,backgroundColor:['#16a34a','#d97706','#dc2626'],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'58%'}
+    });
+  } else {
+    pieChart.data.datasets[0].data = pd;
+    pieChart.update('none');
+  }
+
+  if (!confChart) {
+    confChart = new Chart(document.getElementById('confChart'), {
+      type: 'bar',
+      data:{labels,datasets:[{data:confs,backgroundColor:barColors,borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{font:{size:10},color:'#9ca3af',maxTicksLimit:8},grid:{display:false}},
+          y:{min:0,max:100,ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}}
+        }}
+    });
+  } else {
+    confChart.data.labels = labels;
+    confChart.data.datasets[0].data = confs;
+    confChart.data.datasets[0].backgroundColor = barColors;
+    confChart.update('none');
+  }
+}
+
+function renderTable() {
+  const rows = readings.slice().reverse().slice(0, 60).map(r =>
+    `<tr>
+      <td>${r.ts}</td>
+      <td>${r.ph.toFixed(2)}</td>
+      <td>${r.temp.toFixed(1)}</td>
+      <td>${Math.round(r.gas)}</td>
+      <td><span class="rpill ${r.prediction}">${r.prediction}</span></td>
+      <td>${r.confidence.toFixed(1)}%</td>
+    </tr>`).join('');
+  document.getElementById('tableWrap').innerHTML =
+    `<table><thead><tr><th>Time</th><th>pH</th><th>Temp °C</th><th>Gas ppm</th><th>Prediction</th><th>Confidence</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function clearAll() {
+  readings = []; knownCount = 0;
+  COUNTS.Fresh = 0; COUNTS.Warning = 0; COUNTS.Spoiled = 0;
+  if (lineChart){lineChart.destroy();lineChart=null;}
+  if (pieChart){pieChart.destroy();pieChart=null;}
+  if (confChart){confChart.destroy();confChart=null;}
+  document.getElementById('statusCard').className = 'status-card sc-none';
+  document.getElementById('statusLabel').textContent = 'Waiting for ESP32';
+  document.getElementById('statusValue').textContent = '— — —';
+  document.getElementById('confFill').style.width = '0%';
+  document.getElementById('confPct').textContent = '—% confidence';
+  document.getElementById('lastTs').textContent = 'No readings received yet';
+  document.getElementById('statusIcon').textContent = '?';
+  document.getElementById('statusIcon').style.color = '#e5e7eb';
+  document.getElementById('mPh').textContent = '—';
+  document.getElementById('mTemp').textContent = '—';
+  document.getElementById('mGas').textContent = '—';
+  document.getElementById('countBadge').textContent = '0 readings';
+  document.getElementById('tableWrap').innerHTML = '<div class="empty-state">Waiting for data from Flask — click Start polling</div>';
+}
+
+function exportCSV() {
+  if (!readings.length){alert('No data to export.');return;}
+  const rows = [['Time','pH','Temp (C)','Gas (ppm)','Prediction','Confidence (%)'],
+    ...readings.map(r=>[r.ts,r.ph.toFixed(2),r.temp.toFixed(1),Math.round(r.gas),r.prediction,r.confidence.toFixed(1)])];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));
+  a.download = 'milk_readings.csv';
+  a.click();
+}
+
+function setLog(msg){document.getElementById('logLine').textContent = msg;}
+</script>
